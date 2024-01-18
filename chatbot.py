@@ -9,7 +9,7 @@ from langchain.chains import ConversationalRetrievalChain
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
 from dotenv import load_dotenv
-from lib.ingest import build_embeddings
+from ingest import build_embeddings
 
 persist_directory = os.environ.get("PERSIST_DIRECTORY", 'db')
 system_template = "You are a helpful bot. If you do not know the answer, just say that you do not know, do not try to make up an answer."
