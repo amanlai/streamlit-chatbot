@@ -9,7 +9,7 @@ from langchain.chains import ConversationalRetrievalChain
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
 from dotenv import load_dotenv
-from ingest import build_embeddings
+from lib.ingest import build_embeddings
 
 persist_directory = os.environ.get("PERSIST_DIRECTORY", 'db')
 system_template = "You are a helpful bot. If you do not know the answer, just say that you do not know, do not try to make up an answer."
@@ -64,8 +64,11 @@ def main():
     embeddings = OpenAIEmbeddings()
 
     with st.sidebar:
-        # file uploader widget
+        api_key = st.text_input('OpenAI API Key:', type='password')
+        os.environ['OPENAI_API_KEY'] = api_key
+        # get any additional system message
         system_message = st.text_input('System Message:')
+        # file uploader widget
         uploaded_file = st.file_uploader('Upload a file:', type='pdf')
         temperature = st.number_input('Temperature:', min_value=0., max_value=1., value=0.1)
         # add data button widget
