@@ -2,6 +2,7 @@
 __import__('pysqlite3')
 import sys
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+print(sys.modules['sqlite3'].__version__)
 
 import os
 from datetime import datetime
@@ -15,8 +16,7 @@ from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
 from dotenv import load_dotenv
 from ingest import build_embeddings
-import sqlite3
-print(sqlite3.__version__)
+
 persist_directory = os.environ.get("PERSIST_DIRECTORY", 'db')
 system_template = "You are a helpful bot. If you do not know the answer, just say that you do not know, do not try to make up an answer."
 os.environ['OPENAI_API_KEY'] = 'dummy_key'
