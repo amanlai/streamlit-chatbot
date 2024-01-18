@@ -79,6 +79,11 @@ def main():
     embeddings = OpenAIEmbeddings()
 
     with st.sidebar:
+        # delete chat history
+        reset_chat = st.button("Start a new thread")
+        if reset_chat:
+            st.session_state['chat_history'] = []
+
         api_key = st.text_input('OpenAI API Key:', type='password')
         os.environ['OPENAI_API_KEY'] = api_key
         # api_key = True
@@ -109,6 +114,8 @@ def main():
             key='question', 
             args=(temperature, system_message)
         )
+
+
 
 
 
