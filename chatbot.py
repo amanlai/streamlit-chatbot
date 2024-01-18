@@ -7,17 +7,20 @@ from langchain_community.chat_models import ChatOpenAI
 from langchain.prompts import SystemMessagePromptTemplate, ChatPromptTemplate, HumanMessagePromptTemplate
 from langchain.chains import ConversationalRetrievalChain
 from langchain_community.embeddings import OpenAIEmbeddings
-from langchain_community.vectorstores import Chroma
-from dotenv import load_dotenv
+# from langchain_community.vectorstores import Chroma
 from ingest import build_embeddings
 
+# from dotenv import load_dotenv
+# load_dotenv()
+
 persist_directory = os.environ.get("PERSIST_DIRECTORY", 'db')
-system_template = "You are a helpful bot. If you do not know the answer, just say that you do not know, do not try to make up an answer."
+MESSAGE_PROMPT = "Ask me anything!"
+SYSTEM_TEMPLATE = "You are a helpful bot. If you do not know the answer, just say that you do not know, do not try to make up an answer."
 os.environ['OPENAI_API_KEY'] = 'dummy_key'
 
 def get_docs_chain_kwargs(system_message):
     sys_msg = f"""
-    {system_template}
+    {SYSTEM_TEMPLATE}
     {{context}}
     Current date: {datetime.now().strftime("%A, %B %d, %Y")}.
     {system_message}
@@ -60,6 +63,17 @@ def build_data(uploaded_file, embeddings):
         st.success('File uploaded, chunked and embedded successfully.')
 
 
+def create_answer(temperature, system_message):
+    # creating a reply
+    question = st.session_state['question']
+    chat_history = st.session_state.get('chat_history', [])
+    crc = build_chain(temperature, system_message)
+    result = crc({"question": question, "chat_history": chat_history})
+
+    st.session_state.setdefault('chat_history', []).append((question, result['answer']))
+    st.session_state['question'] = ""
+
+
 
 def main():
     embeddings = OpenAIEmbeddings()
@@ -67,6 +81,7 @@ def main():
     with st.sidebar:
         api_key = st.text_input('OpenAI API Key:', type='password')
         os.environ['OPENAI_API_KEY'] = api_key
+        # api_key = True
         # get any additional system message
         system_message = st.text_input('System Message:')
         # file uploader widget
@@ -77,26 +92,23 @@ def main():
 
         if api_key and uploaded_file and add_data: # if the user browsed a file
             build_data(uploaded_file, embeddings)
-    st.subheader('Your Hyatt Place National Mall Assistant')
+    st.subheader('Your Chat Assistant')
     
     if 'vector_store' in st.session_state:
-        question = st.text_input('Ask a question about the mall')
-        crc = build_chain(temperature, system_message, k=5)
-        # proceed only if the user entered a question
-        if question:
-            with st.spinner('Working on your request ...'):
-                # creating a reply
-                chat_history = st.session_state.get('chat_history', [])
-                result = crc({"question": question, "chat_history": chat_history})
-
-            st.session_state.setdefault('chat_history', []).append((question, result['answer']))
-
-    # displaying the chat history
-    message("How may I assist you today?", is_user=False, key='🤖') # bot welcome text
-    if 'chat_history' in st.session_state:
-        for i, (q, ans) in enumerate(st.session_state['chat_history']):
-            message(q, is_user=True, key=f'{i} 🤓')    # user's question
-            message(ans, is_user=False, key=f'{i} 🤖') # bot response
+        # displaying the chat history
+        message("How may I assist you today?", is_user=False, key='🤖') # bot welcome text
+        if 'chat_history' in st.session_state:
+            for i, (q, ans) in enumerate(st.session_state['chat_history']):
+                message(q, is_user=True, key=f'{i} 🤓')    # user's question
+                message(ans, is_user=False, key=f'{i} 🤖') # bot response
+            
+        # take question
+        st.text_input(
+            'Ask a question related to the document', 
+            on_change=create_answer, 
+            key='question', 
+            args=(temperature, system_message)
+        )
 
 
 
