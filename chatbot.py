@@ -74,7 +74,7 @@ def main():
         # add data button widget
         add_data = st.button('Add Data')
 
-        if uploaded_file and add_data: # if the user browsed a file
+        if api_key and uploaded_file and add_data: # if the user browsed a file
             build_data(uploaded_file, embeddings)
     st.subheader('Your Hyatt Place National Mall Assistant')
     
