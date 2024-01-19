@@ -98,7 +98,7 @@ def main():
         # add data button widget
         add_data = st.button('Add Data')
 
-        if api_key and uploaded_file and add_data: # if the user browsed a file
+        if uploaded_file and add_data: # if the user browsed a file
             build_data(uploaded_file, embeddings)
     st.subheader('Your Chat Assistant')
     
