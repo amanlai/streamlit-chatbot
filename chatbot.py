@@ -9,9 +9,9 @@ from langchain.chains import ConversationalRetrievalChain
 from langchain_community.embeddings import OpenAIEmbeddings
 # from langchain_community.vectorstores import Chroma
 from ingest import build_embeddings
+from dotenv import load_dotenv
 
-# from dotenv import load_dotenv
-# load_dotenv()
+load_dotenv()
 
 persist_directory = os.environ.get("PERSIST_DIRECTORY", 'db')
 MESSAGE_PROMPT = "Ask me anything!"
@@ -74,6 +74,10 @@ def create_answer(temperature, system_message):
     st.session_state['question'] = ""
 
 
+def clear():
+    os.environ['OPENAI_API_KEY'] = st.session_state['openai_key']
+    st.session_state['openai_key'] = ""
+
 
 def main():
     embeddings = OpenAIEmbeddings()
@@ -84,8 +88,7 @@ def main():
         if reset_chat:
             st.session_state['chat_history'] = []
 
-        api_key = st.text_input('OpenAI API Key:', type='password')
-        os.environ['OPENAI_API_KEY'] = api_key
+        st.text_input('OpenAI API Key:', type='password', key='openai_key', on_change=clear)
         # api_key = True
         # get any additional system message
         system_message = st.text_input('System Message:')
