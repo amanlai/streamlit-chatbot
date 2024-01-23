@@ -14,13 +14,13 @@ def get_date(dt):
     eastern = timezone('US/Eastern')
 
     if dt in {'today', 'now'}:
-        return datetime.now(eastern).strftime('%m-%d-%Y')
+        return datetime.now(eastern).strftime('%A, %m-%d-%Y')
     elif dt == 'tomorrow':
-        return (datetime.now(eastern) + timedelta(days=1)).strftime('%m-%d-%Y')
+        return (datetime.now(eastern) + timedelta(days=1)).strftime('%A, %m-%d-%Y')
     elif dt == 'yesterday':
-        return (datetime.now(eastern) - timedelta(days=1)).strftime('%m-%d-%Y')
+        return (datetime.now(eastern) - timedelta(days=1)).strftime('%A, %m-%d-%Y')
     else:
-        return 
+        return dt
 
 @tool
 def get_day_of_week(dt):
