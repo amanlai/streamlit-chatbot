@@ -45,11 +45,23 @@ def get_day_of_week(dt):
 #     diff = datetime.strptime(date2, '%m-%d-%Y') - datetime.strptime(date1, '%m-%d-%Y')
 #     return str(diff.days)
 
-# @tool
-# def get_delta_days_from_date(dt, delta):
-#     """Returns the date delta days from date dt"""
-#     new_date = datetime.strptime(dt, '%m-%d-%Y') + timedelta(days=int(delta))
-#     return new_date.strftime('%m-%d-%Y')
+@tool
+def get_delta_days_from_date(dt, delta):
+    """Returns the date delta days from date dt"""
+    eastern = timezone('US/Eastern')
+    if dt in ('today', 'now'):
+        date1 = datetime.now(eastern)
+    elif dt == 'yesterday':
+        date1 = datetime.now(eastern) - timedelta(days=1)
+    elif dt == 'tomorrow':
+        date1 = datetime.now(eastern) + timedelta(days=1)
+    else:
+        try:
+            date1 = datetime.strptime(dt, '%m-%d-%Y')
+        except ValueError:
+            return 'invalid date format, please use format: mm-dd-YYYY'
+    new_date = date1 + timedelta(days=int(delta))
+    return new_date.strftime('%m-%d-%Y')
 
 
 
@@ -63,7 +75,7 @@ def get_tools():
         get_date, 
         get_day_of_week, 
         # compute_day_difference_in_days, 
-        # get_delta_days_from_date, 
+        get_delta_days_from_date, 
         HumanInputRun()
     ]
     return tools

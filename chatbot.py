@@ -129,7 +129,7 @@ def create_agent(temperature, system_message):
     
     If you can't find relevant information, instead of making up an answer, say "Let me connect you to my colleague".
 
-    As an additional context, if no year is given, the year is {datetime.today().year}.
+    As an additional context, current date is {datetime.now().strftime('%A, %m-%d-%Y')}.
 
     Dates should be in the format mm-dd-YYYY.
 
@@ -155,6 +155,7 @@ def create_agent(temperature, system_message):
         tools=tools,
         verbose=True,
         max_iterations=10,
+        handle_parsing_errors=True,
         early_stopping_method = 'generate'
     )
     
