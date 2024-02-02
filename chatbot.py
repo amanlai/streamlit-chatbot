@@ -17,7 +17,7 @@ from langchain.tools.retriever import create_retriever_tool
 # from langchain.agents.output_parsers import OpenAIFunctionsAgentOutputParser
 # from langchain_community.tools.convert_to_openai import format_tool_to_openai_function
 # from langchain_community.vectorstores import Chroma
-from ingest import build_embeddings, get_vector_store, generate_index
+from ingest import get_vector_store, build_embeddings
 from dotenv import load_dotenv
 from lib.tools import get_tools
 
@@ -29,13 +29,15 @@ MESSAGE_PROMPT = "Ask me anything!"
 SYSTEM_TEMPLATE = "You are a helpful bot. If you do not know the answer, just say that you do not know, do not try to make up an answer."
 os.environ['OPENAI_API_KEY'] = os.environ.get('OPENAI_API_KEY', 'dummy_key')
 model_name = os.environ.get("MODEL_NAME", 'gpt-3.5-turbo')
+use_client = os.environ.get("USE_CLIENT", 'True') == 'True'
+
 
 def build_tools(vector_store, k=5):
     """
     Creates the list of tools to be used by the Agent Executor
     """
     retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": k})
-    
+
     retriever_tool = create_retriever_tool(
         retriever,
         "search_document",
@@ -55,14 +57,12 @@ def build_data(uploaded_file, api_key=None):
         with NamedTemporaryFile(delete=False) as tmp:
             # ext = os.path.splitext(uploaded_file.name)[1]
             tmp.write(uploaded_file.read())
-            # vector_store = build_embeddings(tmp.name)
-            vector_store = generate_index(tmp.name, api_key)
-            build_tools(vector_store)
+            vector_store = build_embeddings(tmp.name, use_client=use_client)
+            # vector_store = generate_index(tmp.name, api_key)
 
         os.remove(tmp.name)
-        # saving the vector store in the streamlit session state (to be persistent between reruns)
-        st.session_state['vector_store'] = vector_store
         st.success('File uploaded, chunked and embedded successfully.')
+        return vector_store
 
 
 def clear():
@@ -202,15 +202,17 @@ def main():
         add_data = st.button('Add Data')
         if add_data:
             if uploaded_file: # if the user browsed a file
-                build_data(uploaded_file, api_key=os.environ['OPENAI_API_KEY'])
+                vector_store = build_data(uploaded_file, api_key=os.environ['OPENAI_API_KEY'])
             elif use_previously_saved_vector_store:
                 # from inspect import signature
                 # print(signature(Chroma))
                 vector_store = get_vector_store()
-                st.session_state['vector_store'] = vector_store
-                build_tools(vector_store)
             else:
                 raise ValueError("must either upload a file or click the button to use existing data")
+            
+            # saving the vector store in the streamlit session state (to be persistent between reruns)
+            st.session_state['vector_store'] = vector_store
+            build_tools(vector_store)
             create_agent(temperature, system_message)
 
 

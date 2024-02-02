@@ -1,7 +1,8 @@
-openai==1.8.0
+openai==1.10.0
 langchain==0.1.1
 langchain-community==0.0.13
-langchain-openai==0.0.2.post1
+langchain-core==0.1.15
+langchain-openai==0.0.3
 streamlit==1.30.0
 streamlit-chat==0.1.1
 pypdf==3.17.4

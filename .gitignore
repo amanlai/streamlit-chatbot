@@ -11,6 +11,7 @@ db/
 chroma/
 docs/
 previous_versions/
+chroma.txt
 
 # Distribution / packaging
 .Python
