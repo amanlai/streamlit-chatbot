@@ -8,6 +8,7 @@ __pycache__/
 
 # Files
 db/
+chroma/
 docs/
 previous_versions/
 
