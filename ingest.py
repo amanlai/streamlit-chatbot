@@ -21,11 +21,15 @@ load_dotenv()
 persist_directory = os.environ.get("PERSIST_DIRECTORY", './db')
 model_name = "text-embedding-ada-002"
 collection_name = "chroma"
+host = os.environ.get("HOST", "localhost")
+port = os.environ.get("PORT", 8000)
+
 if os.environ.get("USE_CLIENT", 'True') == 'True':
     db_client = chromadb.PersistentClient(
         path=persist_directory, 
         settings=Settings(allow_reset=True),
     )
+
 # source_directory = os.environ.get("DOCUMENT_SOURCE_DIR", 'docs')
 
 
@@ -35,6 +39,7 @@ if os.environ.get("USE_CLIENT", 'True') == 'True':
 # chunk_overlap = 200
 chunk_size = 256
 chunk_overlap = 10
+
 
 
 
