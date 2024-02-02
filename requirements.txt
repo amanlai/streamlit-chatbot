@@ -6,7 +6,7 @@ langchain-openai==0.0.3
 streamlit==1.30.0
 streamlit-chat==0.1.1
 pypdf==3.17.4
-chromadb==0.3.29
+chromadb==0.4.22
 tiktoken==0.5.2
 python-dotenv==1.0.0
 holidays==0.41
