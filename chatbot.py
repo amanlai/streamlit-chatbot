@@ -1,11 +1,12 @@
 import os
 from datetime import datetime
 from tempfile import NamedTemporaryFile
-from functools import partial
+# from functools import partial
 import streamlit as st
 from streamlit_chat import message
 from langchain_community.chat_models import ChatOpenAI
-from langchain.prompts import ChatPromptTemplate#, SystemMessagePromptTemplate, HumanMessagePromptTemplate
+# from langchain_community.vectorstores import Chroma
+# from langchain.prompts import ChatPromptTemplate#, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.agents import tool, AgentExecutor, create_openai_tools_agent
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
@@ -16,21 +17,35 @@ from langchain.tools.retriever import create_retriever_tool
 # from langchain.agents.output_parsers import OpenAIFunctionsAgentOutputParser
 # from langchain_community.tools.convert_to_openai import format_tool_to_openai_function
 # from langchain_community.vectorstores import Chroma
-from ingest import build_embeddings
+from ingest import build_embeddings, get_vector_store, generate_index
 from dotenv import load_dotenv
 from lib.tools import get_tools
 
 
 load_dotenv()
 
-persist_directory = os.environ.get("PERSIST_DIRECTORY", 'db')
+persist_directory = os.environ.get("PERSIST_DIRECTORY", './db')
 MESSAGE_PROMPT = "Ask me anything!"
 SYSTEM_TEMPLATE = "You are a helpful bot. If you do not know the answer, just say that you do not know, do not try to make up an answer."
 os.environ['OPENAI_API_KEY'] = os.environ.get('OPENAI_API_KEY', 'dummy_key')
+model_name = os.environ.get("MODEL_NAME", 'gpt-3.5-turbo')
+
+def build_tools(vector_store, k=5):
+    """
+    Creates the list of tools to be used by the Agent Executor
+    """
+    retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": k})
+    
+    retriever_tool = create_retriever_tool(
+        retriever,
+        "search_document",
+        """Searches and retrieves information from the vector store to answer questions whose answers can be found there.""",
+    )
+
+    st.session_state['tools'] = [*get_tools(), retriever_tool]
 
 
-
-def build_data(uploaded_file, k=5):
+def build_data(uploaded_file, api_key=None):
     """
     Process data on the sidebar
     """
@@ -38,18 +53,11 @@ def build_data(uploaded_file, k=5):
 
         # writing the file from RAM to a temporary file that is deleted later
         with NamedTemporaryFile(delete=False) as tmp:
-            ext = os.path.splitext(uploaded_file.name)[1]
+            # ext = os.path.splitext(uploaded_file.name)[1]
             tmp.write(uploaded_file.read())
-            vector_store = build_embeddings(tmp.name)
-
-            retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": k})
-            retriever_tool = create_retriever_tool(
-                retriever,
-                "search_document",
-                """Searches and retrieves information from the vector store to answer questions whose answers can be found there.""",
-            )
-
-            st.session_state['tools'] = [retriever_tool, *get_tools()]
+            # vector_store = build_embeddings(tmp.name)
+            vector_store = generate_index(tmp.name, api_key)
+            build_tools(vector_store)
 
         os.remove(tmp.name)
         # saving the vector store in the streamlit session state (to be persistent between reruns)
@@ -136,7 +144,7 @@ def create_agent(temperature, system_message):
     {system_message}
     """
 
-    llm = ChatOpenAI(model='gpt-3.5-turbo', temperature=temperature)
+    llm = ChatOpenAI(model=model_name, temperature=temperature)
     tools = st.session_state.pop('tools')
 
     # system_message = SystemMessage(content=sys_msg)
@@ -179,14 +187,30 @@ def main():
         # api_key = True
         # get any additional system message
         system_message = st.text_input('System Message:')
-        # file uploader widget
-        uploaded_file = st.file_uploader('Upload a file:', type='pdf')
+        # get the LLM model temperature
         temperature = st.number_input('Temperature:', min_value=0., max_value=1., value=0.1)
+        # file uploader widget
+        col1, col2 = st.columns(2)
+        with col1:
+            uploaded_file = st.file_uploader('Upload a file:', type='pdf')
+        with col2:
+            for _ in range(10):
+                st.write('')
+            use_previously_saved_vector_store = st.checkbox('Use Previous File')
+
         # add data button widget
         add_data = st.button('Add Data')
-
-        if uploaded_file and add_data: # if the user browsed a file
-            build_data(uploaded_file)
+        if add_data:
+            if uploaded_file: # if the user browsed a file
+                build_data(uploaded_file, api_key=os.environ['OPENAI_API_KEY'])
+            elif use_previously_saved_vector_store:
+                # from inspect import signature
+                # print(signature(Chroma))
+                vector_store = get_vector_store()
+                st.session_state['vector_store'] = vector_store
+                build_tools(vector_store)
+            else:
+                raise ValueError("must either upload a file or click the button to use existing data")
             create_agent(temperature, system_message)
 
 

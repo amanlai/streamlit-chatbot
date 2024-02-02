@@ -8,42 +8,60 @@ from langchain.agents import tool
 # import holidays
 from langchain_community.tools import HumanInputRun
 
+
+def get_special_dates(dt, fmt):
+
+    eastern = timezone('US/Eastern')
+    now = datetime.now(eastern)
+    if dt in {'today', 'now'}:
+        return now.strftime(fmt)
+    elif dt == 'tomorrow':
+        return (now + timedelta(days=1)).strftime(fmt)
+    elif dt == 'yesterday':
+        return (now - timedelta(days=1)).strftime(fmt)
+    else:
+        return None
+
+
+def get_parsed_date(dt, fmt):
+
+    if (day:=get_special_dates(dt, fmt)) is not None:
+        return day
+    else:
+        date_pattern = compile(r'^(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])-\d{4}$')
+        if date_pattern.match(dt):
+            try:
+                the_date = parser.parse(dt)
+                return the_date.strftime(fmt)
+                # return day_name[the_date.weekday()]
+            except:
+                return 'invalid date, unable to parse'
+        else:
+            return 'invalid date format, please use format: mm-dd-YYYY'
+    
+
 @tool
 def get_date(dt):
-    """Returns yesterday or today or tomorrow's date in mm-dd-YYYY format"""
-    eastern = timezone('US/Eastern')
+    """
+    Returns a calendar date along with its weekday name.
+    Input can be 'today', 'now', 'tomorrow' or 'yesterday' or a date in mm-dd-YYYY format.
+    Used to get a calendar date or a weekday name to help answer questions related to calendar or date.
+    """
+    return get_parsed_date(dt, fmt='%m-%d-%Y')
 
-    if dt in {'today', 'now'}:
-        return datetime.now(eastern).strftime('%A, %m-%d-%Y')
-    elif dt == 'tomorrow':
-        return (datetime.now(eastern) + timedelta(days=1)).strftime('%A, %m-%d-%Y')
-    elif dt == 'yesterday':
-        return (datetime.now(eastern) - timedelta(days=1)).strftime('%A, %m-%d-%Y')
-    else:
-        return dt
 
 @tool
 def get_day_of_week(dt):
     """Returns the day of week of a given date string"""
-    if dt == 'today':
-        eastern = timezone('US/Eastern')
-        return datetime.now(eastern).strftime('%A')
+    return get_parsed_date(dt, fmt='%A')
 
-    date_pattern = compile(r'^(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])-\d{4}$')
-    if date_pattern.match(dt):
-        try:
-            the_date = parser.parse(dt)
-            return day_name[the_date.weekday()]
-        except:
-            return 'invalid date, unable to parse'
-    else:
-        return 'invalid date format, please use format: mm-dd-YYYY'
 
 # @tool
 # def compute_day_difference_in_days(date1, date2):
 #     """Returns the difference between two dates in days"""
 #     diff = datetime.strptime(date2, '%m-%d-%Y') - datetime.strptime(date1, '%m-%d-%Y')
 #     return str(diff.days)
+
 
 @tool
 def get_delta_days_from_date(dt, delta):
@@ -72,8 +90,8 @@ def get_delta_days_from_date(dt, delta):
 
 def get_tools():
     tools = [
+        get_day_of_week,
         get_date, 
-        get_day_of_week, 
         # compute_day_difference_in_days, 
         get_delta_days_from_date, 
         HumanInputRun()
