@@ -16,6 +16,10 @@ from chromadb.config import Settings
 from dotenv import load_dotenv
 load_dotenv()
 
+# get the latest sqlite3 this way
+import sys
+__import__('pysqlite3')
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 
 # Load environment variables
 persist_directory = os.environ.get("PERSIST_DIRECTORY", './db')
