@@ -46,7 +46,7 @@ def build_tools(vector_store, k=5):
     st.session_state['tools'] = [*get_tools(), retriever_tool]
 
 
-def build_data(uploaded_file, api_key=None):
+def build_data(uploaded_file, data_processor):
     """
     Process data on the sidebar
     """
@@ -56,8 +56,7 @@ def build_data(uploaded_file, api_key=None):
         with NamedTemporaryFile(delete=False) as tmp:
             # ext = os.path.splitext(uploaded_file.name)[1]
             tmp.write(uploaded_file.read())
-            from ingest import build_embeddings
-            vector_store = build_embeddings(tmp.name, use_client=use_client)
+            vector_store = data_processor.build_embeddings(tmp.name)
             # vector_store = generate_index(tmp.name, api_key)
 
         os.remove(tmp.name)
@@ -189,13 +188,14 @@ def main():
         # add data button widget
         add_data = st.button('Add Data')
         if add_data:
+            from ingest import IngestData
+            data_processor = IngestData(api_key=os.environ['OPENAI_API_KEY'])
             if uploaded_file: # if the user browsed a file
-                vector_store = build_data(uploaded_file, api_key=os.environ['OPENAI_API_KEY'])
+                vector_store = build_data(uploaded_file, data_processor)
             elif use_previously_saved_vector_store:
                 # from inspect import signature
                 # print(signature(Chroma))
-                from ingest import get_vector_store
-                vector_store = get_vector_store()
+                vector_store = data_processor.get_vector_store()
             else:
                 raise ValueError("must either upload a file or click the button to use existing data")
             
