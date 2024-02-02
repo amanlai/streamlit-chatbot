@@ -17,7 +17,6 @@ from langchain.tools.retriever import create_retriever_tool
 # from langchain.agents.output_parsers import OpenAIFunctionsAgentOutputParser
 # from langchain_community.tools.convert_to_openai import format_tool_to_openai_function
 # from langchain_community.vectorstores import Chroma
-from ingest import get_vector_store, build_embeddings
 from dotenv import load_dotenv
 from lib.tools import get_tools
 
@@ -57,6 +56,7 @@ def build_data(uploaded_file, api_key=None):
         with NamedTemporaryFile(delete=False) as tmp:
             # ext = os.path.splitext(uploaded_file.name)[1]
             tmp.write(uploaded_file.read())
+            from ingest import build_embeddings
             vector_store = build_embeddings(tmp.name, use_client=use_client)
             # vector_store = generate_index(tmp.name, api_key)
 
@@ -194,6 +194,7 @@ def main():
             elif use_previously_saved_vector_store:
                 # from inspect import signature
                 # print(signature(Chroma))
+                from ingest import get_vector_store
                 vector_store = get_vector_store()
             else:
                 raise ValueError("must either upload a file or click the button to use existing data")
