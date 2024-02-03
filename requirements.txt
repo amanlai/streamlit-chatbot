@@ -10,4 +10,4 @@ chromadb==0.4.0
 tiktoken==0.5.2
 python-dotenv==1.0.0
 holidays==0.41
-pysqlite3-binary
+pysqlite3_binary==0.5.2.post3

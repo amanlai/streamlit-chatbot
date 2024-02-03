@@ -16,13 +16,16 @@ from chromadb.config import Settings
 from dotenv import load_dotenv
 load_dotenv()
 
-# get the latest sqlite3 this way
-import sys
-__import__('pysqlite3')
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+# get the latest sqlite3 this way (for streamlit)
+if os.environ.get('LOCAL_ENV', 'False') == 'False':
+    import sys
+    __import__('pysqlite3')
+    sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+    os.environ['LOCAL_ENV'] = 'False'
 
 # Load environment variables
 persist_directory = os.environ.get("PERSIST_DIRECTORY", './db')
+os.environ['OPENAI_API_KEY'] = os.environ.get('OPENAI_API_KEY', 'dummy_key')
 # source_directory = os.environ.get("DOCUMENT_SOURCE_DIR", 'docs')
 
 
@@ -30,30 +33,9 @@ class CustomOpenAIEmbeddingFunction(OpenAIEmbeddings):
 
     def __init__(self, openai_api_key, *args, **kwargs):
         super().__init__(openai_api_key=openai_api_key, *args, **kwargs)
-
-    # def _embed(self, text):
-    #     """
-    #     Embed text using openai embeddings object
-
-    #     self.client is an openai.resources.embeddings.Embeddings object 
-    #     which defines create() method to create an EmbeddingResponse object which
-    #     includes a list of embeddings
-    #     """
-    #     list_of_embeddings = self.client.create(input=text, model=model_name).data
-    #     # print(len(list_of_embeddings)) # it's only ever going to be length==1
-    #     return list_of_embeddings[0].embedding
-
-
-    # def _embed_documents(self, texts):
-    #     """
-    #     Embed texts added to the collection in Chroma DB
-    #     """
-    #     embeddings = [self._embed(text) for text in texts]
-    #     return embeddings
         
     def _embed_documents(self, texts):
         return super().embed_documents(texts)
-    
 
     def __call__(self, input):
         return self._embed_documents(input)
@@ -64,12 +46,14 @@ class IngestData:
 
     def __init__(
             self, 
-            api_key, 
+            api_key=None, 
             model_name="text-embedding-ada-002", 
             collection_name="chroma", 
             host="localhost", 
             port="8000", 
             use_client=True,
+            chunk_size=256,
+            chunk_overlap=10,
     ):
         # embedding function to be used in collection
         self.model_name = model_name
@@ -77,8 +61,8 @@ class IngestData:
         self.host = host
         self.port = port
         self.use_client = use_client
-        self.chunk_size = 256
-        self.chunk_overlap = 10
+        self.chunk_size = chunk_size
+        self.chunk_overlap = chunk_overlap
 
         if self.use_client:
             self.db_client = chromadb.PersistentClient(
@@ -86,7 +70,9 @@ class IngestData:
                 settings=Settings(allow_reset=True),
             )
             # define embedding model to be used for collections
-            self.embeddings = CustomOpenAIEmbeddingFunction(openai_api_key=api_key)
+            self.embeddings = CustomOpenAIEmbeddingFunction(
+                openai_api_key=os.environ['OPENAI_API_KEY'] if api_key is None else api_key
+            )
         else:
             self.embeddings = OpenAIEmbeddings()
 
@@ -109,7 +95,8 @@ class IngestData:
         # split the document
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=self.chunk_size, 
-            chunk_overlap=self.chunk_overlap)
+            chunk_overlap=self.chunk_overlap
+        )
         chunks = text_splitter.split_documents(documents)
         return chunks
 

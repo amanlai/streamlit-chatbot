@@ -19,6 +19,7 @@ from langchain.tools.retriever import create_retriever_tool
 # from langchain_community.vectorstores import Chroma
 from dotenv import load_dotenv
 from lib.tools import get_tools
+from ingest import IngestData
 
 
 load_dotenv()
@@ -187,18 +188,25 @@ def main():
 
         # add data button widget
         add_data = st.button('Add Data')
+        # TODO: the uploaded file name is used as the collection name
+        if uploaded_file:
+            collection_name = 'chroma'
+            # collection_name = os.path.splitext(uploaded_file.name)[0].replace(" ", "")
+        else:
+            collection_name = 'chroma'
         if add_data:
-            from ingest import IngestData
-            data_processor = IngestData(api_key=os.environ['OPENAI_API_KEY'])
+            data_processor = IngestData(
+                api_key=os.environ['OPENAI_API_KEY'],
+                collection_name=collection_name,
+            )
             if uploaded_file: # if the user browsed a file
                 vector_store = build_data(uploaded_file, data_processor)
             elif use_previously_saved_vector_store:
-                # from inspect import signature
-                # print(signature(Chroma))
                 vector_store = data_processor.get_vector_store()
             else:
-                raise ValueError("must either upload a file or click the button to use existing data")
-            
+                msg = "must either upload a file or click the button to use existing data"
+                st.write(msg)
+                raise ValueError(msg)
             # saving the vector store in the streamlit session state (to be persistent between reruns)
             st.session_state['vector_store'] = vector_store
             build_tools(vector_store)
