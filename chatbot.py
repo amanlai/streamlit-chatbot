@@ -110,7 +110,7 @@ def create_agent(temperature, system_message):
       2. Use search_document tool to see if the restaurant is open on that week day name.
       3. The restaurant might be closed on specific dates such as a Christmas Day, therefore, use get_date tool to find calendar date of tomorrow.
       4. Use search_document tool to see if the restaurant is open on that date.
-      5. Generate an answer if possible. If not, ask for clarifications by answering 
+      5. Generate an answer if possible. If not, ask for clarifications.
     
 
     Don't make any assumptions about data requests. For example, if dates are not specified, you ask follow up questions. 
