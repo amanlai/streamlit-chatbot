@@ -17,17 +17,18 @@ from langchain.tools.retriever import create_retriever_tool
 # from langchain.agents.output_parsers import OpenAIFunctionsAgentOutputParser
 # from langchain_community.tools.convert_to_openai import format_tool_to_openai_function
 # from langchain_community.vectorstores import Chroma
-from dotenv import load_dotenv
+from openai import AuthenticationError
+from pydantic.v1.error_wrappers import ValidationError
 from lib.tools import get_tools
 from ingest import IngestData
 
-
+from dotenv import load_dotenv
 load_dotenv()
 
 persist_directory = os.environ.get("PERSIST_DIRECTORY", './db')
 MESSAGE_PROMPT = "Ask me anything!"
 SYSTEM_TEMPLATE = "You are a helpful bot. If you do not know the answer, just say that you do not know, do not try to make up an answer."
-os.environ['OPENAI_API_KEY'] = os.environ.get('OPENAI_API_KEY', 'dummy_key')
+# os.environ['OPENAI_API_KEY'] = os.environ.get('OPENAI_API_KEY', 'dummy_key')
 model_name = os.environ.get("MODEL_NAME", 'gpt-3.5-turbo')
 use_client = os.environ.get("USE_CLIENT", 'True') == 'True'
 
@@ -65,10 +66,11 @@ def build_data(uploaded_file, data_processor):
         return vector_store
 
 
-def clear():
-    if os.environ['OPENAI_API_KEY'] == 'dummy_key':
-        os.environ['OPENAI_API_KEY'] = st.session_state['openai_key']
-        st.session_state['openai_key'] = ""
+# def clear():
+#     # if os.environ['OPENAI_API_KEY'] == 'dummy_key':
+#     # os.environ['OPENAI_API_KEY'] = st.session_state['openai_key']
+#     st.session_state['api_key'] = st.session_state['openai_key']
+#     st.session_state['openai_key'] = ""
 
 
 
@@ -78,10 +80,15 @@ def create_answer():
     question = st.session_state['question']
     chat_history = st.session_state['chat_history']
     agent_executor = st.session_state['agent_executor']
-
-    result = agent_executor.invoke({"input": question, "chat_history": chat_history})
+    try:
+        result = agent_executor.invoke({"input": question, "chat_history": chat_history})
+    except AuthenticationError:
+        st.write("Invalid OpenAI API Key")
+        st.stop()
     answer = result['output']
-    st.session_state['chat_history'].extend((HumanMessage(content=question), AIMessage(content=answer)))
+    st.session_state['chat_history'].extend(
+        (HumanMessage(content=question), AIMessage(content=answer))
+    )
     st.session_state['question'] = ""
 
 
@@ -93,7 +100,7 @@ def create_agent(temperature, system_message):
 
     Use the provided tools to perform calculations and lookups related to the calendar and datetime computations.
 
-    If you don't have enough context to answer question, you should ask user a follow-up question to get needed info. 
+    If you don't have enough context to answer question, you should ask user a follow-up question to get needed info by invoking `human` and that should be the answer.
     
     Always use tools if you have follow-up questions to the request or if there are questions related to datetime.
     
@@ -103,7 +110,7 @@ def create_agent(temperature, system_message):
       2. Use search_document tool to see if the restaurant is open on that week day name.
       3. The restaurant might be closed on specific dates such as a Christmas Day, therefore, use get_date tool to find calendar date of tomorrow.
       4. Use search_document tool to see if the restaurant is open on that date.
-      5. Generate an answer if possible. If not, ask for clarifications.
+      5. Generate an answer if possible. If not, ask for clarifications by answering 
     
 
     Don't make any assumptions about data requests. For example, if dates are not specified, you ask follow up questions. 
@@ -125,7 +132,11 @@ def create_agent(temperature, system_message):
     If you can't find relevant information, instead of making up an answer, say "Let me connect you to my colleague".
     """
 
-    llm = ChatOpenAI(model=model_name, temperature=temperature)
+    llm = ChatOpenAI(
+        model=model_name,
+        temperature=temperature,
+        openai_api_key=st.session_state['openai_key'],
+    )
     tools = st.session_state.pop('tools')
 
     # system_message = SystemMessage(content=sys_msg)
@@ -171,8 +182,7 @@ def main():
         if reset_chat:
             st.session_state['chat_history'] = []
 
-        st.text_input('OpenAI API Key:', type='password', key='openai_key', on_change=clear)
-        # api_key = True
+        st.text_input('OpenAI API Key:', type='password', key='openai_key')#, on_change=clear)
         # get any additional system message
         system_message = st.text_input('System Message:')
         # get the LLM model temperature
@@ -195,23 +205,28 @@ def main():
         else:
             collection_name = 'chroma'
         if add_data:
-            data_processor = IngestData(
-                api_key=os.environ['OPENAI_API_KEY'],
-                collection_name=collection_name,
-            )
-            if uploaded_file: # if the user browsed a file
-                vector_store = build_data(uploaded_file, data_processor)
-            elif use_previously_saved_vector_store:
-                vector_store = data_processor.get_vector_store()
-            else:
-                msg = "must either upload a file or click the button to use existing data"
-                st.write(msg)
-                raise ValueError(msg)
-            # saving the vector store in the streamlit session state (to be persistent between reruns)
-            st.session_state['vector_store'] = vector_store
-            build_tools(vector_store)
-            create_agent(temperature, system_message)
+            try:
+                data_processor = IngestData(
+                    api_key=st.session_state['openai_key'],
+                    # api_key=os.environ['OPENAI_API_KEY'],
+                    collection_name=collection_name,
+                )
+                if uploaded_file: # if the user browsed a file
+                    vector_store = build_data(uploaded_file, data_processor)
+                elif use_previously_saved_vector_store:
+                    vector_store = data_processor.get_vector_store()
+                else:
+                    msg = "must either upload a file or click the button to use existing data"
+                    st.write(msg)
+                    raise ValueError(msg)
 
+                # saving the vector store in the streamlit session state (to be persistent between reruns)
+                st.session_state['vector_store'] = vector_store
+                build_tools(vector_store)
+                create_agent(temperature, system_message)
+            except (AuthenticationError, ValidationError):
+                st.write("Invalid OpenAI API Key")
+                st.stop()
 
 
     # main page

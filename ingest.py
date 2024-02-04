@@ -25,7 +25,7 @@ if os.environ.get('LOCAL_ENV', 'False') == 'False':
 
 # Load environment variables
 persist_directory = os.environ.get("PERSIST_DIRECTORY", './db')
-os.environ['OPENAI_API_KEY'] = os.environ.get('OPENAI_API_KEY', 'dummy_key')
+# os.environ['OPENAI_API_KEY'] = os.environ.get('OPENAI_API_KEY', 'dummy_key')
 # source_directory = os.environ.get("DOCUMENT_SOURCE_DIR", 'docs')
 
 
@@ -71,10 +71,12 @@ class IngestData:
             )
             # define embedding model to be used for collections
             self.embeddings = CustomOpenAIEmbeddingFunction(
-                openai_api_key=os.environ['OPENAI_API_KEY'] if api_key is None else api_key
+                openai_api_key=api_key
             )
         else:
-            self.embeddings = OpenAIEmbeddings()
+            self.embeddings = OpenAIEmbeddings(
+                openai_api_key=api_key
+            )
 
 
     def load_document(self, filename):
