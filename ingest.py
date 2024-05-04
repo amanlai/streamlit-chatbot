@@ -69,6 +69,12 @@ class IngestData:
                 path=persist_directory, 
                 settings=Settings(allow_reset=True),
             )
+            # # must run `chroma run --path db`` first
+            # self.db_client = chromadb.HttpClient(
+            #     port=self.port,
+            #     host=self.host,
+            #     settings=Settings(allow_reset=True),
+            # )
             # define embedding model to be used for collections
             self.embeddings = CustomOpenAIEmbeddingFunction(
                 openai_api_key=os.environ['OPENAI_API_KEY'] if api_key is None else api_key

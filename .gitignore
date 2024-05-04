@@ -12,6 +12,8 @@ chroma/
 docs/
 previous_versions/
 chroma.txt
+secrets.toml
+.streamlit/
 
 # Distribution / packaging
 .Python
